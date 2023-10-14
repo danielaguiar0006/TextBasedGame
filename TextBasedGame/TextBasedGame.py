@@ -25,6 +25,19 @@ class Player():
             if item.name.title() == item_name:
                 self.inventory.append(item)
                 room_items[self.location].remove(item)
+                print('You picked up', item.name)
+
+                # TODO? A better way to do this is to have a player equip method
+                # to edit health and attack attributes with items like chestplate or sword
+                if item.effect == 'increase health':
+                    self.max_health += item.value
+                    self.health += item.value
+                    print(f'Max health increased by {item.value}! (Max health now: {self.max_health})')
+                elif item.effect == 'increase damage':
+                    self.damage += item.value
+                    print(f'Attack damage increased by {item.value}! (Attack dammage now: {self.damage})')
+            else:
+                print(f'Error... no item named "{item_name}" in room.')
 
     # Method to attack mobs.
     def attack(self, mob_name, room_mobs):
@@ -36,9 +49,8 @@ class Player():
 
         if target_mob:
             damage_done = self.damage
-            for item in self.inventory:
-                if item.name == 'The Dragon Slayer Sword':
-                    damage_done = 150
+            # TODO could add logic to add additional effects like random critial effects or poision here
+
             target_mob.health -= damage_done
             print(f'You did {damage_done} damage to {target_mob.name}!')
         else:
@@ -70,12 +82,16 @@ class Player():
         else:
             print(f"{item_name} is not consumable.")
 
-    def display_item_info(self, item_name):
+    def display_item_info(self, item_name):  # TODO maybe show player info too
         # Look for the item in the inventory.
         item_for_info = next((item for item in self.inventory if item.name.title() == item_name), None)
 
+        # Display info
         if item_for_info:
-            print(f"{item_for_info.description}")
+            # Determine sign for info
+            sign = '+' if item_for_info.value >= 0 else '-'
+
+            print(f"{item_for_info.description} ({item_for_info.effect}: {sign}{item_for_info.value})")
         else:
             print(f"You don't have a {item_name} in your inventory.")
 
@@ -98,17 +114,24 @@ class Mob():
 
     # Method for mob to attack the player.
     def attack_player(self, player):
-        if self.is_alive and self.is_attackable:
+        if self.is_attackable:
             print(f"{self.name} attacks you for {self.damage} damage!")
             player.health -= self.damage
             player.check_health()
 
     # Method to check the mob's health and remove it if it's dead.
-    def check_health(self, room_mobs, location):
+    def check_health(self, room_mobs, location, room_items):
         if self.health <= 0:
             self.is_alive = False
             print(f'{self.name} has been defeated!')
             room_mobs[location].remove(self)
+
+            # If the mob is the dragon, add the dragon's heart to the room.
+            if self.name == 'Ancient Dragon':
+                dragon_heart_item = Item('Ancient Dragon\'s Heart', 'The very essence of the ancient dragon, pulsating '
+                                                                    'with energy.', effect='ends game')
+                room_items[location].append(dragon_heart_item)
+                print(f"{self.name} dropped {dragon_heart_item.name}!")
 
 
 # Item class representing items that can be picked up in the game.
@@ -137,7 +160,6 @@ def setup():
                  }
 
     # Create items
-    torch_item = Item('Torch', 'A flickering torch that drives away the darkness and reveals hidden secrets.')
     health_potion_item = Item('Elixir of Vitality', 'A shimmering red potion that restores vitality and mends wounds.',
                               consumable=True, effect='heal', value=25)
     health_potion_item2 = Item('Elixir of Vitality', 'A rejuvenating concoction that instantly heals minor injuries.',
@@ -146,16 +168,12 @@ def setup():
                                    consumable=True, effect='heal', value=25)  # Note: This might be for testing only?
     enchanted_armour_item = Item('Enchanted Chestplate',
                                  'A gleaming chestplate imbued with protective spells. It lessens the impact of enemy '
-                                 'blows.')
+                                 'blows.', effect='increase health', value=50)
     sword_item = Item('The Dragon Slayer Sword',
                       'A legendary blade, forged in dragonfire and imbued with the power to vanquish the mightiest of '
-                      'dragons.')
-    key_item = Item('Rusty Key',
-                    'An ancient key, tarnished with age. The intricate design hints at a special lock it might open.',
-                    consumable=True)
+                      'dragons.', effect='increase damage', value=100)
 
     # Create mobs
-    test_mob = Mob('Undead Soldier', health=100, damage=20)  # TODO REMOVE ME
     undead_soldier_1 = Mob('Undead Soldier', health=100, damage=20)
     undead_soldier_2 = Mob('Undead Soldier', health=100, damage=20)
     hell_hound_1 = Mob('Hell Hound', health=75, damage=15)
@@ -163,20 +181,19 @@ def setup():
     hell_hound_3 = Mob('Hell Hound', health=75, damage=15)
     dragon = Mob('Ancient Dragon', health=500, damage=25)
 
-    # Map items to rooms
-    room_items = {'Entrance Hall': [torch_item, test_health_potion_item],  # TODO Remove test potion item
+    # Map items to rooms # TODO NEED TO REARRANGE ITEM AND MOB MAP
+    room_items = {'Entrance Hall': [test_health_potion_item],
                   'The Majestic Dining Room': [enchanted_armour_item],
                   'The Desolate Kitchen': [health_potion_item],
                   'The Haunted Chamber': [],
                   'The Cursed Dungeon': [sword_item],
-                  'The Dragon\'s Lair': [],  # TODO After Killing dragon it should drop 'Dragons Heart,' ending the game
-                  'The Abandoned Bedroom': [key_item],
+                  'The Dragon\'s Lair': [],
+                  'The Abandoned Bedroom': [],
                   'The Forgotten Library': [health_potion_item2]
                   }
 
     # Map mobs to rooms
-    room_mobs = {'Entrance Hall': [test_mob], 'The Majestic Dining Room': [], 'The Desolate Kitchen': [],
-                 # TODO REMOVE TEST MOB
+    room_mobs = {'Entrance Hall': [], 'The Majestic Dining Room': [], 'The Desolate Kitchen': [],
                  'The Haunted Chamber': [undead_soldier_1, undead_soldier_2],
                  'The Cursed Dungeon': [hell_hound_1, hell_hound_2, hell_hound_3],
                  'The Dragon\'s Lair': [dragon], 'The Abandoned Bedroom': [], 'The Forgotten Library': []
@@ -188,11 +205,12 @@ def setup():
 def main():
     rooms_map, room_items, room_mobs = setup()
     player = Player()
+    game_ending_condition = False
 
     show_instructions()
 
     # main game loop
-    while player.is_alive:  # TODO add ending condition (ex:picking up dragon's heart)
+    while player.is_alive or game_ending_condition:
         display_hud(player, rooms_map, room_mobs, room_items)
 
         action_turn_completed = None
@@ -200,6 +218,7 @@ def main():
 
         print('\n*************************************')
 
+        # Players turn
         # ? Match case could be used instead...
         if action_type == 'go' or action_type == 'move':
             action_turn_completed = False
@@ -220,11 +239,24 @@ def main():
             action_turn_completed = False
             print('Invalid action')
 
+        # Enemy turn
         if action_turn_completed:
-            for mob in room_mobs[player.location]:
-                mob.check_health(room_mobs, player.location)
-                mob.attack_player(player)
+            for mob in room_mobs[player.location][:]:  # Copy the list for iteration
+                mob.check_health(room_mobs, player.location, room_items)  # Passing room_items to check_health
+                if mob.is_alive:  # Only alive mobs will attack
+                    mob.attack_player(player)
+
+        # Checking game ending condition
+        for item in player.inventory:  # TODO ADD CONGRATS SCREEN FOR SLAYING DRAGON
+            if item.effect == 'ends game':
+                game_ending_condition = True
+            else:
+                continue
+
         print('*************************************')
+
+        if game_ending_condition:
+            display_congrats_screen()
 
 
 # Function to process player's input.
@@ -243,32 +275,56 @@ def show_instructions():
     print("Adventure into the depths and slay the dragon.")
     print("Move commands: go South, go North, go East, go West, exit")
     print("Add to Inventory: get 'item name'")
-    print("Attack enemy: hit 'enemy name'")
+    print("Use item in inventory: use 'item name'")
+    print("Display item info: info 'item name' (also must be in inventory)")
+    print("Attack enemy: hit 'enemy name'\n")
 
 
 # Display the game's heads-up display to give player context.
 def display_hud(player, rooms_map, room_mobs, room_items):
-    print(f'\nYou are in {player.location}')
+    print(f'\nCurrent Room: {player.location}')
 
     # Display monsters in the room.
-    monsters = [f"{mob.name}: (Health: {mob.health})" for mob in room_mobs[player.location]]
-    print('Monsters in room:', ', '.join(monsters))
+    if room_mobs[player.location]:
+        monsters = [f"{mob.name} (Health: {mob.health})" for mob in room_mobs[player.location]]
+        print('Monsters in room:', ', '.join(monsters))
+    else:
+        print('No monsters in this room.')
 
     # Display items in the room.
-    items = [item.name for item in room_items[player.location]]
-    print('Items in room:', ', '.join(items))
+    if room_items[player.location]:
+        items = [item.name for item in room_items[player.location]]
+        print('Items in room:', ', '.join(items))
+    else:
+        print('No items in this room.')
 
     # Display player's health.
     print(f'\nPlayer Health: {player.health}')
 
     # Display player's inventory.
     inventory_items = [item.name for item in player.inventory]
-    print('Inventory:', ', '.join(inventory_items))
+    if inventory_items:
+        print('Inventory:', ', '.join(inventory_items))
+    else:
+        print('Inventory: Empty')
 
     # Display available directions.
     print(f"Available directions: {', '.join(rooms_map[player.location].keys())}")
 
     print('-------------------------------------')
+
+
+def display_congrats_screen():
+    print("\n\n")
+    print("*****************************************")
+    print("*                                       *")
+    print("*       CONGRATULATIONS, HERO!          *")
+    print("*                                       *")
+    print("*   You have slain the Ancient Dragon   *")
+    print("*   and saved the realm from its terror! *")
+    print("*                                       *")
+    print("*****************************************")
+    print("\n\n")
 
 
 # Start the game.
