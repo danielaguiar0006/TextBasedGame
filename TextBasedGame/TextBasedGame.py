@@ -1,6 +1,19 @@
-# Daniel Aguiar
-# 10/13/2023
-# Mini Text-Based Game for IT-140 Class
+"""
+------------------------------------------------------------------------------------------
+File:          TextBasedGame.py
+Project:       The Depths - A Text-Based Adventure Game
+Author:        Daniel Aguiar
+Student ID:    2736623
+Email:         daniel.aguiar@snhu.edu
+Course:        IT-140 - [Introduction to Scripting]
+Instructor:    [Ellis Hodgdon]
+School:        [Southern New Hampshire University]
+Date:          10/14/2023
+Description:   This program implements a mini text-based game where the player ventures
+               into the depths of a dungeon, battling monsters, collecting items, and
+               seeking to defeat the Ancient Dragon.
+------------------------------------------------------------------------------------------
+"""
 
 # Player class representing the main character in the game.
 class Player():
@@ -85,13 +98,15 @@ class Player():
         # If the item is consumable, apply its effect.
         if item_to_use.consumable:
             if item_to_use.effect == "heal":
+                original_health = self.health
                 # Limiting healing effect to not go past players max health
                 if self.health + item_to_use.value > self.max_health:
                     self.health = self.max_health
-                    print(f"You used {item_name} and restored {self.max_health - self.health} health points!")
+                    print(f"You used {item_name} and restored {self.max_health - original_health} health points!")
                 else:
                     self.health += item_to_use.value
                     print(f"You used {item_name} and restored {item_to_use.value} health points!")
+
             # Add more effects as needed here using elif statements.
 
             # Remove the item from the inventory.
@@ -185,13 +200,13 @@ def setup():
                                       'perils beyond imagination. Tread with caution."')
     health_potion_item_1 = Item('Elixir of Vitality',
                                 'A shimmering red potion that restores vitality and mends wounds.',
-                                consumable=True, effect='heal', value=100)
+                                consumable=True, effect='heal', value=175)
     health_potion_item_2 = Item('Elixir of Vitality', 'A rejuvenating concoction that instantly heals minor injuries.',
-                                consumable=True, effect='heal', value=100)
+                                consumable=True, effect='heal', value=175)
     health_potion_item_3 = Item('Elixir of Vitality', 'A deep red potion, promising swift recovery from injuries.',
-                                consumable=True, effect='heal', value=100)
+                                consumable=True, effect='heal', value=175)
     health_potion_item_4 = Item('Elixir of Vitality', 'A deep red potion, promising swift recovery from injuries.',
-                                consumable=True, effect='heal', value=100)
+                                consumable=True, effect='heal', value=175)
     enchanted_armour_item = Item('Enchanted Chestplate',
                                  'A gleaming chestplate imbued with protective spells. It lessens the impact of enemy '
                                  'blows.', effect='increase health', value=50)
@@ -309,14 +324,19 @@ def handle_input():
 
 # Display game instructions at the start.
 def show_instructions():  # TODO Display alternative input commands
-    # print a main menu and the commands
-    print("The Depths")
-    print("Adventure into the depths and slay the dragon.")
-    print("Move commands: go South, go North, go East, go West, exit")
-    print("Add to Inventory: get 'item name'")
-    print("Use item in inventory: use 'item name'")
-    print("Display item info: info 'item name' (also must be in inventory)")
-    print("Attack enemy: hit 'enemy name'\n")
+    # Print a instructions and the commands
+    print("\n\nWelcome to 'The Depths'!")
+    print("Venture into the mysterious dungeon, face formidable foes, and seek the Ancient Dragon.")
+    print("\nCOMMANDS:")
+    print("Move: 'go [direction]' (e.g., 'go North') - Directions: North, South, East, West")
+    print("Pick up item: 'get [item name]' (e.g., 'get Lost Scroll')")
+    print("Use item: 'use [item name]' (e.g., 'use Elixir of Vitality') - Doesn't consume a turn.")
+    print("View item details: 'info [item name]' (e.g., 'info Lost Scroll') - Doesn't consume a turn.")
+    print("Attack enemy: 'hit [enemy name]' (e.g., 'hit Wretched Zombie')")
+    print("\nNOTE: Attacking an enemy uses up your turn, allowing enemies to retaliate. However, using items like "
+          "healing potions does not consume a turn. And although it is not necessary to be case-sensitive, "
+          "it is essential to match spelling.")
+    print("Good luck, adventurer!\n")
 
 
 # Display the game's heads-up display to give player context.
