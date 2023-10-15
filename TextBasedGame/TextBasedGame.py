@@ -1,4 +1,6 @@
 # Daniel Aguiar
+# 10/13/2023
+# Mini Text-Based Game for IT-140 Class
 
 # Player class representing the main character in the game.
 class Player():
@@ -20,9 +22,11 @@ class Player():
             print('You can\'t go that way! Please try again.')
 
     # Method to pick up items.
-    def pick_up(self, item_name, room_items):
+    def pick_up(self, item_name, room_items, is_action_turn_completed):
+        item_found = False
         for item in room_items[self.location]:
             if item.name.title() == item_name:
+                item_found = True
                 self.inventory.append(item)
                 room_items[self.location].remove(item)
                 print('You picked up', item.name)
@@ -36,11 +40,20 @@ class Player():
                 elif item.effect == 'increase damage':
                     self.damage += item.value
                     print(f'Attack damage increased by {item.value}! (Attack dammage now: {self.damage})')
-            else:
-                print(f'Error... no item named "{item_name}" in room.')
+
+                # Player's turn completed
+                is_action_turn_completed = True
+                break
+
+        if not item_found:
+            print(f'Error... no item named "{item_name}" in room.')
+            # Player's turn not completed succesfully
+            is_action_turn_completed = False
+
+        return is_action_turn_completed
 
     # Method to attack mobs.
-    def attack(self, mob_name, room_mobs):
+    def attack(self, mob_name, room_mobs, is_action_turn_completed):
         target_mob = None
         for mob in room_mobs[self.location]:
             if mob.name.title() == mob_name and mob.is_attackable:
@@ -52,9 +65,13 @@ class Player():
             # TODO could add logic to add additional effects like random critial effects or poision here
 
             target_mob.health -= damage_done
+            is_action_turn_completed = True
             print(f'You did {damage_done} damage to {target_mob.name}!')
         else:
+            is_action_turn_completed = False
             print(f"There's no {mob_name} here to attack.")
+
+        return is_action_turn_completed
 
     # Method to use items
     def use_item(self, item_name):
@@ -82,16 +99,19 @@ class Player():
         else:
             print(f"{item_name} is not consumable.")
 
-    def display_item_info(self, item_name):  # TODO maybe show player info too
+    def display_item_info(self, item_name):  # TODO maybe add to show player info too
         # Look for the item in the inventory.
         item_for_info = next((item for item in self.inventory if item.name.title() == item_name), None)
 
         # Display info
         if item_for_info:
-            # Determine sign for info
-            sign = '+' if item_for_info.value >= 0 else '-'
-
-            print(f"{item_for_info.description} ({item_for_info.effect}: {sign}{item_for_info.value})")
+            # If item effects attributes:
+            if item_for_info.effect and item_for_info.value:
+                # Determine sign for info
+                sign = '+' if item_for_info.value >= 0 else '-'
+                print(f"{item_for_info.description} ({item_for_info.effect}: {sign}{item_for_info.value})")
+            else:
+                print(f"{item_for_info.description}")
         else:
             print(f"You don't have a {item_name} in your inventory.")
 
@@ -160,43 +180,63 @@ def setup():
                  }
 
     # Create items
-    health_potion_item = Item('Elixir of Vitality', 'A shimmering red potion that restores vitality and mends wounds.',
-                              consumable=True, effect='heal', value=25)
-    health_potion_item2 = Item('Elixir of Vitality', 'A rejuvenating concoction that instantly heals minor injuries.',
-                               consumable=True, effect='heal', value=25)
-    test_health_potion_item = Item('Elixir of Vitality', 'A test potion with unknown effects. Use with caution!',
-                                   consumable=True, effect='heal', value=25)  # Note: This might be for testing only?
+    scroll_item = Item('Lost Scroll', 'A timeworn scroll, its edges frayed with age. Unrolling it reveals cryptic \n'
+                                      'runes and a message: "Beware, adventurer, for the depths of the lair hold \n'
+                                      'perils beyond imagination. Tread with caution."')
+    health_potion_item_1 = Item('Elixir of Vitality',
+                                'A shimmering red potion that restores vitality and mends wounds.',
+                                consumable=True, effect='heal', value=100)
+    health_potion_item_2 = Item('Elixir of Vitality', 'A rejuvenating concoction that instantly heals minor injuries.',
+                                consumable=True, effect='heal', value=100)
+    health_potion_item_3 = Item('Elixir of Vitality', 'A deep red potion, promising swift recovery from injuries.',
+                                consumable=True, effect='heal', value=100)
+    health_potion_item_4 = Item('Elixir of Vitality', 'A deep red potion, promising swift recovery from injuries.',
+                                consumable=True, effect='heal', value=100)
     enchanted_armour_item = Item('Enchanted Chestplate',
                                  'A gleaming chestplate imbued with protective spells. It lessens the impact of enemy '
                                  'blows.', effect='increase health', value=50)
+    enchanted_amulet_item = Item('Enchanted Amulet', 'A radiant amulet set with a gem that pulses with a soft light. '
+                                                     'Its wearer feels an unmistakable aura of protection enveloping '
+                                                     'them.', effect='increase health', value=25)
+    enchanted_ring_item = Item('Enchanted Ring', 'A delicately crafted ring, adorned with intricate runes that glow '
+                                                 'faintly. When worn, one can feel a surge of strength coursing '
+                                                 'through their veins.', effect='increase damage', value=25)
     sword_item = Item('The Dragon Slayer Sword',
                       'A legendary blade, forged in dragonfire and imbued with the power to vanquish the mightiest of '
                       'dragons.', effect='increase damage', value=100)
 
     # Create mobs
-    undead_soldier_1 = Mob('Undead Soldier', health=100, damage=20)
-    undead_soldier_2 = Mob('Undead Soldier', health=100, damage=20)
-    hell_hound_1 = Mob('Hell Hound', health=75, damage=15)
-    hell_hound_2 = Mob('Hell Hound', health=75, damage=15)
-    hell_hound_3 = Mob('Hell Hound', health=75, damage=15)
-    dragon = Mob('Ancient Dragon', health=500, damage=25)
+    undead_skeleton_soldier_1 = Mob('Undead Skeleton Soldier', health=100, damage=30)
+    undead_skeleton_soldier_2 = Mob('Undead Skeleton Soldier', health=100, damage=30)
+    undead_skeleton_soldier_3 = Mob('Undead Skeleton Soldier', health=100, damage=30)
+    zombie_1 = Mob('Wretched Zombie', health=75, damage=25)
+    zombie_2 = Mob('Wretched Zombie', health=75, damage=25)
+    zombie_3 = Mob('Wretched Zombie', health=75, damage=25)
+    hell_hound_1 = Mob('Hell Hound', health=75, damage=20)
+    hell_hound_2 = Mob('Hell Hound', health=75, damage=20)
+    hell_hound_3 = Mob('Hell Hound', health=75, damage=20)
+    dragon = Mob('Ancient Dragon', health=500, damage=60)
 
-    # Map items to rooms # TODO NEED TO REARRANGE ITEM AND MOB MAP
-    room_items = {'Entrance Hall': [test_health_potion_item],
-                  'The Majestic Dining Room': [enchanted_armour_item],
-                  'The Desolate Kitchen': [health_potion_item],
-                  'The Haunted Chamber': [],
-                  'The Cursed Dungeon': [sword_item],
+    # Map items to rooms # TODO NEED TO REARRANGE ITEM AND MOB MAP (working on it...)
+    room_items = {'Entrance Hall': [scroll_item, health_potion_item_1],
+                  'The Majestic Dining Room': [],
+                  'The Desolate Kitchen': [health_potion_item_2],
+                  'The Haunted Chamber': [enchanted_armour_item],
+                  'The Cursed Dungeon': [health_potion_item_3, sword_item],
                   'The Dragon\'s Lair': [],
-                  'The Abandoned Bedroom': [],
-                  'The Forgotten Library': [health_potion_item2]
+                  'The Abandoned Bedroom': [health_potion_item_4],
+                  'The Forgotten Library': [enchanted_amulet_item, enchanted_ring_item]
                   }
 
     # Map mobs to rooms
-    room_mobs = {'Entrance Hall': [], 'The Majestic Dining Room': [], 'The Desolate Kitchen': [],
-                 'The Haunted Chamber': [undead_soldier_1, undead_soldier_2],
+    room_mobs = {'Entrance Hall': [],
+                 'The Majestic Dining Room': [zombie_1],
+                 'The Desolate Kitchen': [undead_skeleton_soldier_1],
+                 'The Haunted Chamber': [undead_skeleton_soldier_2, undead_skeleton_soldier_3],
                  'The Cursed Dungeon': [hell_hound_1, hell_hound_2, hell_hound_3],
-                 'The Dragon\'s Lair': [dragon], 'The Abandoned Bedroom': [], 'The Forgotten Library': []
+                 'The Dragon\'s Lair': [dragon],
+                 'The Abandoned Bedroom': [zombie_2, zombie_3],
+                 'The Forgotten Library': []
                  }
     return rooms_map, room_items, room_mobs
 
@@ -210,37 +250,36 @@ def main():
     show_instructions()
 
     # main game loop
-    while player.is_alive or game_ending_condition:
+    while player.is_alive and not game_ending_condition:
         display_hud(player, rooms_map, room_mobs, room_items)
 
-        action_turn_completed = None
+        is_action_turn_completed = None
         action_type, command = handle_input()
 
         print('\n*************************************')
 
-        # Players turn
-        # ? Match case could be used instead...
+        # Players turn         # ? Match case could be used instead...
         if action_type == 'go' or action_type == 'move':
-            action_turn_completed = False
+            is_action_turn_completed = False
             player.move(command, rooms_map)
         elif action_type == 'get' or action_type == 'pickup':
-            action_turn_completed = True
-            player.pick_up(command, room_items)
+            # Will return true if an item is actually picked up
+            is_action_turn_completed = player.pick_up(command, room_items, is_action_turn_completed)
         elif action_type == 'hit' or action_type == 'attack':
-            action_turn_completed = True
-            player.attack(command, room_mobs)
+            # Will return true if valid enemy is attacked
+            is_action_turn_completed = player.attack(command, room_mobs, is_action_turn_completed)  # TODO same as above
         elif action_type == 'use':
-            action_turn_completed = True
+            is_action_turn_completed = False
             player.use_item(command)
         elif action_type == 'info' or action_type == 'display':
-            action_turn_completed = True
+            is_action_turn_completed = False
             player.display_item_info(command)
         else:
-            action_turn_completed = False
+            is_action_turn_completed = False
             print('Invalid action')
 
         # Enemy turn
-        if action_turn_completed:
+        if is_action_turn_completed:
             for mob in room_mobs[player.location][:]:  # Copy the list for iteration
                 mob.check_health(room_mobs, player.location, room_items)  # Passing room_items to check_health
                 if mob.is_alive:  # Only alive mobs will attack
@@ -269,7 +308,7 @@ def handle_input():
 
 
 # Display game instructions at the start.
-def show_instructions():
+def show_instructions():  # TODO Display alternative input commands
     # print a main menu and the commands
     print("The Depths")
     print("Adventure into the depths and slay the dragon.")
